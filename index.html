@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0B1410">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>WCPKL Cockpit</title>
+<style>
+  :root{
+    --pitch:#0B1410; --card:#121E18; --card2:#0F1A14; --edge:#1E2E25;
+    --line:#E8E6DF; --dim:#8FA098; --gold:#D4A943; --gold-deep:#A8842F;
+    --ok:#5FA877; --run:#C9A33B; --bad:#C25450;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html{background:var(--pitch)}
+  body{
+    font-family:var(--sans);color:var(--line);background:var(--pitch);
+    min-height:100vh;padding:env(safe-area-inset-top) 14px calc(24px + env(safe-area-inset-bottom));
+    max-width:560px;margin:0 auto;
+  }
+  header{display:flex;align-items:baseline;justify-content:space-between;padding:14px 2px 10px}
+  h1{font-size:17px;font-weight:800;letter-spacing:-.3px}
+  h1 small{color:var(--dim);font-weight:600;letter-spacing:.4px;font-size:11px;text-transform:uppercase;margin-left:6px}
+  #gear{background:none;border:none;color:var(--dim);font-size:20px;padding:6px;cursor:pointer}
+
+  /* — Scoreboard (signature) — */
+  .board{
+    background:var(--card2);border:1px solid var(--edge);border-radius:14px;
+    padding:14px 16px;margin-bottom:16px;
+  }
+  .board .lbl{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--dim)}
+  .board .evt{font-size:15px;font-weight:700;margin:4px 0 6px}
+  .board .clk{
+    font-family:var(--mono);font-variant-numeric:tabular-nums;
+    font-size:34px;font-weight:600;letter-spacing:1px;color:var(--gold);
+  }
+  .board .clk .u{font-size:13px;color:var(--dim);letter-spacing:0;margin-right:8px}
+  @media (prefers-reduced-motion:no-preference){
+    .board.live .clk{animation:tick 1s steps(1) infinite}
+    @keyframes tick{50%{opacity:.82}}
+  }
+
+  .sec{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--dim);margin:18px 2px 8px}
+
+  /* — Sélecteur de journée — */
+  .jrow{display:flex;gap:8px;margin-bottom:10px}
+  .jrow button{
+    flex:1;padding:10px 0;border-radius:10px;border:1px solid var(--edge);
+    background:var(--card);color:var(--dim);font-family:var(--mono);font-size:15px;font-weight:600;cursor:pointer;
+  }
+  .jrow button.on{border-color:var(--gold);color:var(--gold);background:rgba(212,169,67,.08)}
+
+  /* — Boutons d'action — */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .act{
+    padding:15px 12px;border-radius:12px;border:1px solid var(--edge);background:var(--card);
+    color:var(--line);font-size:15px;font-weight:700;text-align:left;cursor:pointer;min-height:54px;
+  }
+  .act small{display:block;color:var(--dim);font-weight:500;font-size:11.5px;margin-top:3px}
+  .act.gold{background:var(--gold);border-color:var(--gold);color:#171204}
+  .act.gold small{color:#4A3B10}
+  .act.wide{grid-column:1/-1}
+  .act:active{transform:scale(.985)}
+  .act:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+  /* — Avancé — */
+  details{margin-top:14px;border:1px solid var(--edge);border-radius:12px;background:var(--card2)}
+  summary{padding:13px 14px;font-size:13px;font-weight:700;color:var(--dim);cursor:pointer;list-style:none}
+  summary::-webkit-details-marker{display:none}
+  .adv{padding:0 14px 14px;display:grid;gap:10px}
+  .frow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .frow label{font-size:14px;color:var(--line)}
+  .frow .hint{display:block;font-size:11.5px;color:var(--dim)}
+  select,input[type=text],input[type=password]{
+    background:var(--card);border:1px solid var(--edge);color:var(--line);
+    border-radius:9px;padding:10px;font-size:16px;width:100%;
+  }
+  .frow select{width:auto;min-width:130px}
+  .sw{position:relative;width:46px;height:28px;flex:none}
+  .sw input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+  .sw i{position:absolute;inset:0;background:var(--edge);border-radius:20px;transition:.15s;pointer-events:none}
+  .sw i::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--dim);transition:.15s}
+  .sw input:checked + i{background:var(--gold)}
+  .sw input:checked + i::after{left:21px;background:#171204}
+  #launch{width:100%;margin-top:2px;padding:14px;border-radius:11px;border:none;background:var(--gold);color:#171204;font-size:15px;font-weight:800;cursor:pointer}
+
+  /* — Runs — */
+  .runhead{display:flex;align-items:center;justify-content:space-between;margin:18px 2px 8px}
+  #refresh{background:none;border:1px solid var(--edge);border-radius:8px;color:var(--dim);font-size:13px;padding:6px 10px;cursor:pointer}
+  .run{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--edge);border-radius:11px;padding:11px 12px;margin-bottom:8px;text-decoration:none;color:var(--line)}
+  .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .dot.ok{background:var(--ok)} .dot.bad{background:var(--bad)}
+  .dot.run{background:var(--run)}
+  @media (prefers-reduced-motion:no-preference){.dot.run{animation:pulse 1.1s ease-in-out infinite}@keyframes pulse{50%{opacity:.35}}}
+  .run .t{flex:1;min-width:0}
+  .run .t b{display:block;font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .run .t span{font-size:11.5px;color:var(--dim);font-family:var(--mono)}
+  .run .st{font-size:11px;font-family:var(--mono);color:var(--dim);flex:none}
+  .empty{color:var(--dim);font-size:13px;padding:10px 2px}
+
+  /* — Toast & modal — */
+  #toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(8px);
+    background:var(--card);border:1px solid var(--edge);color:var(--line);padding:11px 16px;border-radius:11px;
+    font-size:13.5px;max-width:88vw;opacity:0;pointer-events:none;transition:.2s;z-index:30;text-align:center}
+  #toast.show{opacity:1;transform:translateX(-50%)}
+  #toast.err{border-color:var(--bad)}
+  .veil{position:fixed;inset:0;background:rgba(5,9,7,.72);display:none;align-items:flex-end;justify-content:center;z-index:20}
+  .veil.show{display:flex}
+  .sheet{background:var(--card2);border:1px solid var(--edge);border-radius:16px 16px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));width:100%;max-width:560px}
+  .sheet h2{font-size:16px;margin-bottom:4px}
+  .sheet p{font-size:13px;color:var(--dim);margin-bottom:14px}
+  .sheet .btns{display:flex;gap:10px}
+  .sheet .btns button{flex:1;padding:13px;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;border:1px solid var(--edge);background:var(--card);color:var(--line)}
+  .sheet .btns .go{background:var(--bad);border-color:var(--bad);color:#fff}
+  .sheet .cfg{display:grid;gap:10px;margin-bottom:14px}
+  .sheet .cfg label{font-size:12px;color:var(--dim)}
+  .sheet .btns .save{background:var(--gold);border-color:var(--gold);color:#171204}
+</style>
+</head>
+<body>
+<header>
+  <h1>⚽ WCPKL <small>cockpit</small></h1>
+  <button id="gear" aria-label="Réglages">⚙︎</button>
+</header>
+
+<section class="board" id="board">
+  <div class="lbl" id="boardLbl">Prochain coup d'envoi</div>
+  <div class="evt" id="boardEvt">—</div>
+  <div class="clk" id="boardClk">--<span class="u">j</span>--:--:--</div>
+</section>
+
+<div class="sec">Journée ciblée</div>
+<div class="jrow" id="jrow"></div>
+
+<div class="sec">Actions</div>
+<div class="grid">
+  <button class="act gold" data-quick="crack">🧠 Crack<small>Fable 5 → écrit la grille</small></button>
+  <button class="act" data-quick="submit">📤 Soumettre<small>grille → site (réel)</small></button>
+  <button class="act" data-quick="audit">🔍 Audit matchs<small>vérifie les 72 matchs</small></button>
+  <button class="act" data-quick="captain">🎖️ Capitaine<small>analyse du pari PSG</small></button>
+  <button class="act" data-quick="direct">📡 Direct<small>duels & scores en cours</small></button>
+  <button class="act" data-quick="bonus2">🧮 Bonus 2<small>classements implicites</small></button>
+  <button class="act wide" data-quick="antifail">🛡️ Anti-fail · submit-all<small>dépose le favori partout où il manque une grille (réel)</small></button>
+</div>
+
+<details id="advBox">
+  <summary>Réglages avancés</summary>
+  <div class="adv">
+    <div class="frow"><label>Action</label>
+      <select id="fAction">
+        <option>scrape</option><option>audit-matchs</option><option>baseline</option>
+        <option>crack</option><option>bonus2</option><option>submit</option>
+        <option>submit-all</option><option>auto</option><option>kchouch</option><option>captain</option>
+      </select>
+    </div>
+    <div class="frow"><label>Posture crack</label>
+      <select id="fMode"><option>neutre</option><option>safe</option><option>jackpot</option><option>auto</option></select>
+    </div>
+    <div class="frow"><label>Dry-run<span class="hint">test : ne soumet rien au site</span></label>
+      <span class="sw"><input type="checkbox" id="fDry" checked><i></i></span></div>
+    <div class="frow"><label>Recherche IA<span class="hint">crack : web + Fable 5 (sinon cotes seules)</span></label>
+      <span class="sw"><input type="checkbox" id="fAi" checked><i></i></span></div>
+    <div class="frow"><label>Écrire la grille<span class="hint">crack : sauve grilles/jX.json</span></label>
+      <span class="sw"><input type="checkbox" id="fWrite" checked><i></i></span></div>
+    <div class="frow"><label>Anti-fail<span class="hint">submit-all : favori si grille absente</span></label>
+      <span class="sw"><input type="checkbox" id="fSafe"><i></i></span></div>
+    <button id="launch">Lancer l'action</button>
+  </div>
+</details>
+
+<div class="runhead"><div class="sec" style="margin:0">Derniers runs</div><button id="refresh">↻ Actualiser</button></div>
+<div id="runs"><div class="empty">Configure ton token (⚙︎) pour voir les runs.</div></div>
+
+<div id="toast" role="status"></div>
+
+<div class="veil" id="confirmVeil">
+  <div class="sheet">
+    <h2>Soumission réelle</h2>
+    <p id="confirmTxt">Cette action envoie tes pronos au site WCPKL.</p>
+    <div class="btns"><button id="confirmNo">Annuler</button><button class="go" id="confirmYes">Confirmer l'envoi</button></div>
+  </div>
+</div>
+
+<div class="veil" id="cfgVeil">
+  <div class="sheet">
+    <h2>Connexion GitHub</h2>
+    <p>Le token reste sur ce téléphone (localStorage). Fine-grained, accès « Actions : Read & write » sur le repo du bot uniquement.</p>
+    <div class="cfg">
+      <div><label>Token (fine-grained PAT)</label><input type="password" id="cToken" placeholder="github_pat_…" autocomplete="off"></div>
+      <div><label>Repo</label><input type="text" id="cRepo" value="JoBakou/wcpkl-auto" autocomplete="off"></div>
+      <div><label>Fichier workflow</label><input type="text" id="cWf" value="wcpkl-bot.yml" autocomplete="off"></div>
+      <div><label>Branche</label><input type="text" id="cRef" value="main" autocomplete="off"></div>
+    </div>
+    <div class="btns"><button id="cfgCancel">Fermer</button><button class="save" id="cfgSave">Enregistrer</button></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ---------- Config ---------- */
+const LS = "wcpkl_cfg";
+let cfg = null;
+try { cfg = JSON.parse(localStorage.getItem(LS) || "null"); } catch (e) { cfg = null; }
+
+/* ---------- Calendrier Phase 1 (heure de Paris, juin = UTC+2) ---------- */
+const EVENTS = [
+  { name: "Deadline Phase 1 — dépôt des 6 journées", t: Date.parse("2026-06-11T12:00:00+02:00"), live: true },
+  { name: "Coup d'envoi J2", t: Date.parse("2026-06-15T18:00:00+02:00") },
+  { name: "Coup d'envoi J3", t: Date.parse("2026-06-18T18:00:00+02:00") },
+  { name: "Coup d'envoi J4", t: Date.parse("2026-06-21T18:00:00+02:00") },
+  { name: "Coup d'envoi J5", t: Date.parse("2026-06-24T21:00:00+02:00") },
+  { name: "Coup d'envoi J6", t: Date.parse("2026-06-26T21:00:00+02:00") },
+];
+const KICKOFFS = { 2: EVENTS[1].t, 3: EVENTS[2].t, 4: EVENTS[3].t, 5: EVENTS[4].t, 6: EVENTS[5].t };
+
+/* ---------- Scoreboard ---------- */
+const $ = (id) => document.getElementById(id);
+function pad(n) { return String(n).padStart(2, "0"); }
+function tickBoard() {
+  const now = Date.now();
+  const ev = EVENTS.find(e => e.t > now);
+  if (!ev) { $("boardLbl").textContent = "Phase 1"; $("boardEvt").textContent = "Toutes les journées sont lancées"; $("boardClk").textContent = "—"; return; }
+  $("boardLbl").textContent = ev.live ? "Deadline" : "Prochain coup d'envoi";
+  $("boardEvt").textContent = ev.name;
+  let s = Math.floor((ev.t - now) / 1000);
+  const d = Math.floor(s / 86400); s -= d * 86400;
+  const h = Math.floor(s / 3600);  s -= h * 3600;
+  const m = Math.floor(s / 60);    s -= m * 60;
+  $("boardClk").innerHTML = d + '<span class="u">j</span>' + pad(h) + ":" + pad(m) + ":" + pad(s);
+  $("board").classList.toggle("live", !!ev.live);
+}
+setInterval(tickBoard, 1000); tickBoard();
+
+/* ---------- Journée ciblée ---------- */
+let journee = (() => { const now = Date.now();
+  for (const j of [2, 3, 4, 5, 6]) if (KICKOFFS[j] > now) return j;
+  return 6; })();
+function renderJrow() {
+  const row = $("jrow"); row.innerHTML = "";
+  for (const j of [2, 3, 4, 5, 6]) {
+    const b = document.createElement("button");
+    b.textContent = "J" + j;
+    if (j === journee) b.classList.add("on");
+    b.onclick = () => { journee = j; renderJrow(); };
+    row.appendChild(b);
+  }
+}
+renderJrow();
+
+/* ---------- Toast ---------- */
+let toastTimer = null;
+function toast(msg, err) {
+  const t = $("toast"); t.textContent = msg; t.classList.toggle("err", !!err); t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 4200);
+}
+
+/* ---------- API GitHub ---------- */
+function headers() {
+  return { "Authorization": "Bearer " + cfg.token, "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
+}
+function apiBase() { return "https://api.github.com/repos/" + cfg.repo; }
+function explain(status) {
+  if (status === 401) return "Token invalide ou expiré (401).";
+  if (status === 403) return "Accès refusé — vérifie la permission Actions du token (403).";
+  if (status === 404) return "Repo ou workflow introuvable — token sans accès ? (404)";
+  if (status === 422) return "Inputs refusés par le workflow (422).";
+  return "Erreur GitHub " + status + ".";
+}
+async function dispatch(inputs) {
+  if (!cfg || !cfg.token) { openCfg(); return false; }
+  try {
+    const r = await fetch(apiBase() + "/actions/workflows/" + cfg.wf + "/dispatches", {
+      method: "POST", headers: headers(),
+      body: JSON.stringify({ ref: cfg.ref, inputs: inputs }),
+    });
+    if (r.status === 204) {
+      toast("✅ Lancé : " + inputs.action + (inputs.journee ? " J" + inputs.journee : "") + (inputs.dry_run === "false" ? " (RÉEL)" : ""));
+      pollRuns(); return true;
+    }
+    toast("❌ " + explain(r.status), true); return false;
+  } catch (e) { toast("❌ Réseau : " + e.message, true); return false; }
+}
+
+/* ---------- Runs ---------- */
+function ago(iso) {
+  const s = Math.floor((Date.now() - Date.parse(iso)) / 1000);
+  if (s < 60) return s + "s"; if (s < 3600) return Math.floor(s / 60) + "min";
+  if (s < 86400) return Math.floor(s / 3600) + "h"; return Math.floor(s / 86400) + "j";
+}
+async function loadRuns(silent) {
+  if (!cfg || !cfg.token) return;
+  try {
+    const r = await fetch(apiBase() + "/actions/workflows/" + cfg.wf + "/runs?per_page=6", { headers: headers() });
+    if (!r.ok) { if (!silent) toast("❌ " + explain(r.status), true); return; }
+    const data = await r.json();
+    const box = $("runs"); box.innerHTML = "";
+    if (!data.workflow_runs || !data.workflow_runs.length) { box.innerHTML = '<div class="empty">Aucun run pour l\u2019instant.</div>'; return; }
+    for (const run of data.workflow_runs) {
+      const a = document.createElement("a");
+      a.className = "run"; a.href = run.html_url; a.target = "_blank"; a.rel = "noopener";
+      const done = run.status === "completed";
+      const cls = !done ? "run" : (run.conclusion === "success" ? "ok" : "bad");
+      const st = !done ? run.status : run.conclusion;
+      a.innerHTML = '<span class="dot ' + cls + '"></span><span class="t"><b>' + (run.display_title || run.name) +
+        '</b><span>#' + run.run_number + " · il y a " + ago(run.created_at) + '</span></span><span class="st">' + st + "</span>";
+      box.appendChild(a);
+    }
+  } catch (e) { if (!silent) toast("❌ Réseau : " + e.message, true); }
+}
+let pollN = 0, pollT = null;
+function pollRuns() { pollN = 10; clearInterval(pollT);
+  pollT = setInterval(() => { loadRuns(true); if (--pollN <= 0) clearInterval(pollT); }, 12000);
+  setTimeout(() => loadRuns(true), 2500);
+}
+$("refresh").onclick = () => loadRuns(false);
+
+/* ---------- Confirmation (envois réels) ---------- */
+let pending = null;
+function confirmReal(txt, inputs) {
+  pending = inputs; $("confirmTxt").textContent = txt; $("confirmVeil").classList.add("show");
+}
+$("confirmNo").onclick = () => { pending = null; $("confirmVeil").classList.remove("show"); };
+$("confirmYes").onclick = () => { const p = pending; pending = null; $("confirmVeil").classList.remove("show"); if (p) dispatch(p); };
+
+/* ---------- Actions rapides ---------- */
+const QUICK = {
+  crack:    () => dispatch({ action: "crack", journee: String(journee), dry_run: "true",
+                             crack_mode: $("fMode").value, crack_use_ai: "true", crack_write: "true" }),
+  submit:   () => confirmReal("Soumettre la grille J" + journee + " au site (grilles/j" + journee + ".json) — envoi réel.",
+                             { action: "submit", journee: String(journee), dry_run: "false" }),
+  audit:    () => dispatch({ action: "audit-matchs", dry_run: "true" }),
+  captain:  () => dispatch({ action: "captain", dry_run: "true" }),
+  direct:   () => dispatch({ action: "direct", dry_run: "true" }),
+  bonus2:   () => dispatch({ action: "bonus2", dry_run: "true" }),
+  antifail: () => confirmReal("Submit-all ANTI-FAIL : dépose le favori sur chaque journée sans grille — envoi réel.",
+                             { action: "submit-all", dry_run: "false", safe_fallback: "true" }),
+};
+document.querySelectorAll("[data-quick]").forEach(b => { b.onclick = () => QUICK[b.dataset.quick](); });
+
+/* ---------- Lanceur avancé ---------- */
+$("launch").onclick = () => {
+  const a = $("fAction").value;
+  const inputs = { action: a, dry_run: $("fDry").checked ? "true" : "false" };
+  if (a === "submit" || a === "crack") inputs.journee = String(journee);
+  if (a === "crack" || a === "auto") {
+    inputs.crack_mode = $("fMode").value;
+    inputs.crack_use_ai = $("fAi").checked ? "true" : "false";
+    inputs.crack_write = $("fWrite").checked ? "true" : "false";
+  }
+  if ($("fSafe").checked) inputs.safe_fallback = "true";
+  if (inputs.dry_run === "false" && (a === "submit" || a === "submit-all" || a === "auto")) {
+    confirmReal("Action « " + a + " » en mode réel — les pronos partiront vers le site.", inputs);
+  } else { dispatch(inputs); }
+};
+
+/* ---------- Panneau config ---------- */
+function openCfg() {
+  if (cfg) { $("cToken").value = cfg.token || ""; $("cRepo").value = cfg.repo; $("cWf").value = cfg.wf; $("cRef").value = cfg.ref; }
+  $("cfgVeil").classList.add("show");
+}
+$("gear").onclick = openCfg;
+$("cfgCancel").onclick = () => $("cfgVeil").classList.remove("show");
+$("cfgSave").onclick = () => {
+  cfg = { token: $("cToken").value.trim(), repo: $("cRepo").value.trim(),
+          wf: $("cWf").value.trim(), ref: $("cRef").value.trim() || "main" };
+  localStorage.setItem(LS, JSON.stringify(cfg));
+  $("cfgVeil").classList.remove("show");
+  toast("Connexion enregistrée"); loadRuns(false);
+};
+
+/* ---------- Démarrage ---------- */
+if (cfg && cfg.token) loadRuns(true); else setTimeout(openCfg, 600);
+</script>
+</body>
+</html>

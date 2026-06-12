@@ -89,6 +89,17 @@
   .sw input:checked + i::after{left:21px;background:#171204}
   #launch{width:100%;margin-top:2px;padding:14px;border-radius:11px;border:none;background:var(--gold);color:#171204;font-size:15px;font-weight:800;cursor:pointer}
 
+  /* — Guide — */
+  .guide{padding:0 14px 16px;font-size:13.5px;color:var(--line)}
+  .guide h3{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--gold);margin:16px 0 8px}
+  .guide .rule{background:rgba(212,169,67,.08);border:1px solid var(--gold-deep);border-radius:10px;padding:10px 12px;font-size:13px;margin-top:12px;color:var(--line)}
+  .guide dl{margin:0}
+  .guide dt{font-weight:700;margin-top:10px;font-size:13.5px}
+  .guide dd{margin:2px 0 0;color:var(--dim);font-size:12.5px;line-height:1.5}
+  .guide ol{margin:0;padding-left:20px}
+  .guide ol li{margin-bottom:8px;font-size:13px;line-height:1.5}
+  .guide p{color:var(--dim);font-size:12.5px;line-height:1.5;margin-top:6px}
+
   /* — Runs — */
   .runhead{display:flex;align-items:center;justify-content:space-between;margin:18px 2px 8px}
   #refresh{background:none;border:1px solid var(--edge);border-radius:8px;color:var(--dim);font-size:13px;padding:6px 10px;cursor:pointer}
@@ -170,6 +181,66 @@
     <div class="frow"><label>Anti-fail<span class="hint">submit-all : favori si grille absente</span></label>
       <span class="sw"><input type="checkbox" id="fSafe"><i></i></span></div>
     <button id="launch">Lancer l'action</button>
+  </div>
+</details>
+
+<details id="guideBox">
+  <summary>📖 Guide du cockpit</summary>
+  <div class="guide">
+    <div class="rule">⚖️ Règle d'or : seuls <b>📤 Soumettre</b> et <b>🛡️ Anti-fail</b> envoient
+    quelque chose au site — toujours après un écran de confirmation. Tout le reste
+    ne fait que lire et analyser : tape sans risque.</div>
+
+    <h3>Les boutons</h3>
+    <dl>
+      <dt>🧠 Crack</dt>
+      <dd>Fable 5 analyse la journée ciblée (recherche web : compos, forme, enjeux
+      + cotes + simulations) et écrit la grille optimale dans le repo
+      (grilles/jX.json). Le détail arrive par email. N'envoie rien au site.</dd>
+      <dt>📤 Soumettre</dt>
+      <dd>Envoie la grille jX.json au site (réel, remplace l'existante).
+      Nécessite un Crack au préalable — sans grille, le run échoue exprès.</dd>
+      <dt>🔍 Audit matchs</dt>
+      <dd>Compare les matchs du site aux 72 théoriques : détecte les oublis
+      (comme les 3 matchs manquants de J6 à l'époque).</dd>
+      <dt>🎖️ Capitaine</dt>
+      <dd>Analyse du pari capitaine PSG : EV, value site vs marché, pièges.</dd>
+      <dt>📡 Direct</dt>
+      <dd>Classement provisoire de la journée, ton duel H2H match par match,
+      BT des deux camps (lus dans le mail d'ouverture). À volonté pendant les matchs.</dd>
+      <dt>🧮 Bonus 2</dt>
+      <dd>Classements de groupes implicites déduits de tes grilles
+      (le bonus jusqu'à 4000 pts en fin de Phase 1).</dd>
+      <dt>🛡️ Anti-fail · submit-all</dt>
+      <dd>Filet de sécurité : dépose le favori de chaque match sur toute journée
+      SANS grille (réel). Ne touche pas aux journées déjà couvertes.</dd>
+      <dt>Réglages avancés</dt>
+      <dd>Toutes les actions + options fines : dry-run (test sans envoi),
+      posture du crack (safe / neutre / jackpot selon ta position au classement),
+      recherche IA on/off.</dd>
+    </dl>
+
+    <h3>Routine avant chaque journée</h3>
+    <ol>
+      <li>La veille ou le matin du coup d'envoi : sélectionne la <b>journée ciblée</b>.</li>
+      <li><b>🧠 Crack</b> → run vert en quelques minutes → email avec la grille,
+      le BT et le raisonnement.</li>
+      <li>Lis l'email. Convaincu → étape 4. Pas convaincu → Réglages avancés :
+      change la <b>posture</b> (jackpot pour recoller, safe pour protéger) et re-Crack.</li>
+      <li><b>📤 Soumettre</b> → Confirmer l'envoi → run vert.</li>
+      <li>L'email de confirmation du site tombe. Il n'affiche que 8 matchs sur 12 :
+      <b>normal</b>, bug cosmétique connu — l'enregistrement est complet.</li>
+      <li>Tu peux re-cracker et re-soumettre <b>autant que tu veux</b> jusqu'au
+      coup d'envoi (compte à rebours en haut).</li>
+    </ol>
+
+    <h3>Pendant les matchs</h3>
+    <p>📡 Direct → email avec scores en cours, duel et classement. Les recaps
+    du bot arrivent toujours par email : le cockpit déclenche, Gmail raconte.</p>
+
+    <h3>Modifier un score à la main</h3>
+    <p>github.com → wcpkl-auto → grilles/jX.json → ✏️ Edit → change le score
+    → Commit, puis 📤 Soumettre ici.</p>
   </div>
 </details>
 

@@ -135,7 +135,7 @@
 </head>
 <body>
 <header>
-  <h1>⚽ WCPKL <small>cockpit · v2.0</small></h1>
+  <h1>⚽ WCPKL <small>cockpit · v2.1</small></h1>
   <button id="gear" aria-label="Réglages">⚙︎</button>
 </header>
 
@@ -157,6 +157,7 @@
   <button class="act" data-quick="direct">📡 Direct<small>duels & scores en cours</small></button>
   <button class="act" data-quick="bonus2">🧮 Bonus 2<small>classements implicites</small></button>
   <button class="act wide" data-quick="dump">📥 Dump HTML<small>capture historique/direct/classement → repo (data/)</small></button>
+  <button class="act wide" data-quick="record">📒 Calibration<small>enregistre les vrais scores → le crack apprend</small></button>
   <button class="act wide" data-quick="antifail">🛡️ Anti-fail · submit-all<small>dépose le favori partout où il manque une grille (réel)</small></button>
 </div>
 
@@ -168,7 +169,7 @@
         <option>scrape</option><option>audit-matchs</option><option>baseline</option>
         <option>crack</option><option>bonus2</option><option>submit</option>
         <option>submit-all</option><option>auto</option><option>kchouch</option><option>captain</option>
-        <option>direct</option><option>dump-html</option>
+        <option>direct</option><option>dump-html</option><option>record</option>
       </select>
     </div>
     <div class="frow"><label>Posture crack</label>
@@ -218,6 +219,11 @@
       <dd>Capture le HTML brut de historique.php, direct.php et classement.php
       dans le repo (data/). Sert à câbler la calibration sur du réel : lance-le,
       puis ouvre data/dump_historique.html → « Raw » → copie. Ne touche pas au site.</dd>
+      <dt>📒 Calibration</dt>
+      <dd>Lit les vrais scores de la dernière journée (historique.php) et les
+      confronte aux probas du crack (ledger). Le crack mesure sa fiabilité (Brier)
+      et se recalibre (température) pour les journées suivantes. À lancer après
+      chaque journée terminée. Reçu par email. Ne touche pas au site.</dd>
       <dt>🛡️ Anti-fail · submit-all</dt>
       <dd>Filet de sécurité : dépose le favori de chaque match sur toute journée
       SANS grille (réel). Ne touche pas aux journées déjà couvertes.</dd>
@@ -419,6 +425,7 @@ const QUICK = {
   direct:   () => dispatch({ action: "direct", dry_run: "true" }),
   bonus2:   () => dispatch({ action: "bonus2", dry_run: "true" }),
   dump:     () => dispatch({ action: "dump-html", dry_run: "true" }),
+  record:   () => dispatch({ action: "record", dry_run: "true" }),
   antifail: () => confirmReal("Submit-all ANTI-FAIL : dépose le favori sur chaque journée sans grille — envoi réel.",
                              { action: "submit-all", dry_run: "false", safe_fallback: "true" }),
 };

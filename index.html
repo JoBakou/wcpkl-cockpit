@@ -131,6 +131,18 @@
   .sheet .cfg{display:grid;gap:10px;margin-bottom:14px}
   .sheet .cfg label{font-size:12px;color:var(--dim)}
   .sheet .btns .save{background:var(--gold);border-color:var(--gold);color:#171204}
+
+  /* — Saisie manuelle de la grille — */
+  .manual{padding:0 14px 14px;display:grid;gap:11px}
+  .mhint{font-size:12.5px;color:var(--dim);line-height:1.5;margin-top:4px}
+  .mgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin:4px 0}
+  .mrow{display:flex;align-items:center;gap:6px}
+  .mnum{font-family:var(--mono);font-size:12px;color:var(--dim);width:26px;flex:none}
+  .msc{flex:1;min-width:0;text-align:center;background:var(--card);border:1px solid var(--edge);color:var(--line);border-radius:8px;padding:9px 4px;font-size:16px;font-variant-numeric:tabular-nums}
+  .mdash{color:var(--dim);flex:none}
+  #mSubmit{width:100%;padding:14px;border-radius:11px;border:none;background:var(--gold);color:#171204;font-size:15px;font-weight:800;cursor:pointer;margin-top:2px}
+  #mTest{width:100%;padding:11px;border-radius:10px;border:1px solid var(--edge);background:var(--card);color:var(--line);font-size:13.5px;font-weight:600;cursor:pointer}
+  #mClear{width:100%;padding:8px;border:none;background:none;color:var(--dim);font-size:12.5px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -160,6 +172,26 @@
   <button class="act wide" data-quick="record">📒 Calibration<small>enregistre les vrais scores → le crack apprend</small></button>
   <button class="act wide" data-quick="antifail">🛡️ Anti-fail · submit-all<small>dépose le favori partout où il manque une grille (réel)</small></button>
 </div>
+
+<details id="manualBox">
+  <summary>📝 Saisir & soumettre ma grille</summary>
+  <div class="manual">
+    <p class="mhint">Tape tes scores pour <b id="mJ">J?</b> (change la journée en haut), choisis le BT et le Kchouch, puis soumets — le bot poste sur le site. Pour la J6, remplis 9 matchs et laisse les 3 derniers vides.</p>
+    <div id="mGrid" class="mgrid"></div>
+    <div class="frow"><label>BT (×5) sur le</label><select id="mBt"></select></div>
+    <div class="frow"><label>Kchouch</label>
+      <select id="mKch">
+        <option value="aucun">Aucun</option>
+        <option value="gef">Gefiltefish</option>
+        <option value="gab">Gabarit</option>
+        <option value="boukha">Boukha</option>
+      </select>
+    </div>
+    <button id="mSubmit">📤 Soumettre cette grille</button>
+    <button id="mTest">🧪 Tester sans envoyer</button>
+    <button id="mClear">Vider</button>
+  </div>
+</details>
 
 <details id="advBox">
   <summary>Réglages avancés</summary>
@@ -336,6 +368,7 @@ function renderJrow() {
     b.onclick = () => { journee = j; renderJrow(); };
     row.appendChild(b);
   }
+  const mj = $("mJ"); if (mj) mj.textContent = "J" + journee;
 }
 renderJrow();
 
@@ -460,6 +493,63 @@ $("cfgSave").onclick = () => {
   localStorage.setItem(LS, JSON.stringify(cfg));
   $("cfgVeil").classList.remove("show");
   toast("Connexion enregistrée"); loadRuns(false);
+};
+
+/* ---------- Saisie manuelle de la grille ---------- */
+(function buildManualUI() {
+  const grid = $("mGrid");
+  if (!grid) return;
+  let h = "";
+  for (let i = 1; i <= 12; i++) {
+    h += '<div class="mrow"><span class="mnum">M' + i + '</span>'
+      +  '<input class="msc" id="mh' + i + '" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="Match ' + i + ' domicile">'
+      +  '<span class="mdash">\u2013</span>'
+      +  '<input class="msc" id="ma' + i + '" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="Match ' + i + ' ext\u00e9rieur"></div>';
+  }
+  grid.innerHTML = h;
+  const bt = $("mBt");
+  for (let i = 1; i <= 12; i++) {
+    const o = document.createElement("option");
+    o.value = String(i); o.textContent = "Match " + i; bt.appendChild(o);
+  }
+})();
+
+function buildManualGrille() {
+  const rows = []; let stopped = false;
+  for (let i = 1; i <= 12; i++) {
+    const hv = $("mh" + i).value.trim(), av = $("ma" + i).value.trim();
+    if (hv === "" && av === "") { stopped = true; continue; }
+    if (stopped) return { err: "Trou au Match " + i + " : remplis les matchs dans l'ordre, sans saut." };
+    if (hv === "" || av === "") return { err: "Match " + i + " : score incomplet." };
+    if (!/^\d{1,2}$/.test(hv) || !/^\d{1,2}$/.test(av)) return { err: "Match " + i + " : score invalide (chiffres uniquement)." };
+    rows.push(hv + "-" + av);
+  }
+  if (!rows.length) return { err: "Aucun score saisi." };
+  const bt = parseInt($("mBt").value, 10);
+  if (!bt || bt < 1 || bt > rows.length) return { err: "BT : choisis un match entre 1 et " + rows.length + "." };
+  return { grille: rows.join(","), bt: String(bt), kchouch: $("mKch").value };
+}
+
+const KCH_LABEL = { aucun: "Aucun", gef: "Gefiltefish", gab: "Gabarit", boukha: "Boukha" };
+$("mSubmit").onclick = () => {
+  const g = buildManualGrille();
+  if (g.err) { toast("\u274c " + g.err, true); return; }
+  const nb = g.grille.split(",").length;
+  confirmReal(
+    "Soumettre ta grille J" + journee + " : " + nb + " matchs \u00b7 BT sur le Match " + g.bt +
+    " \u00b7 Kchouch " + (KCH_LABEL[g.kchouch] || g.kchouch) + " \u2014 envoi R\u00c9EL au site.",
+    { action: "submit-manual", journee: String(journee), grille: g.grille, bt_match: g.bt, kchouch: g.kchouch, dry_run: "false" }
+  );
+};
+$("mTest").onclick = () => {
+  const g = buildManualGrille();
+  if (g.err) { toast("\u274c " + g.err, true); return; }
+  // dry-run : le bot lit/valide la grille et finit en vert SANS rien envoyer au site.
+  dispatch({ action: "submit-manual", journee: String(journee), grille: g.grille, bt_match: g.bt, kchouch: g.kchouch, dry_run: "true" });
+};
+$("mClear").onclick = () => {
+  for (let i = 1; i <= 12; i++) { $("mh" + i).value = ""; $("ma" + i).value = ""; }
+  $("mBt").value = "1"; $("mKch").value = "aucun"; toast("Grille vid\u00e9e");
 };
 
 /* ---------- Démarrage ---------- */

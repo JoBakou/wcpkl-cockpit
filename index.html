@@ -147,7 +147,7 @@
 </head>
 <body>
 <header>
-  <h1>⚽ WCPKL <small>cockpit · v2.1</small></h1>
+  <h1>⚽ WCPKL <small>cockpit · v2.2</small></h1>
   <button id="gear" aria-label="Réglages">⚙︎</button>
 </header>
 
@@ -176,7 +176,7 @@
 <details id="manualBox">
   <summary>📝 Saisir & soumettre ma grille</summary>
   <div class="manual">
-    <p class="mhint">Tape tes scores pour <b id="mJ">J?</b> (change la journée en haut), choisis le BT et le Kchouch, puis soumets — le bot poste sur le site. Pour la J6, remplis 9 matchs et laisse les 3 derniers vides.</p>
+    <p class="mhint">Tape tes scores pour <b id="mJ">J?</b> (change la journée en haut), choisis le BT et le Kchouch, puis soumets — le bot poste sur le site. Phase à élimination (P2 = J7) : 16 matchs, score à 120'.</p>
     <div id="mGrid" class="mgrid"></div>
     <div class="frow"><label>BT (×5) sur le</label><select id="mBt"></select></div>
     <div class="frow"><label>Kchouch</label>
@@ -276,8 +276,8 @@
       <li>Lis l'email. Convaincu → étape 4. Pas convaincu → Réglages avancés :
       change la <b>posture</b> (jackpot pour recoller, safe pour protéger) et re-Crack.</li>
       <li><b>📤 Soumettre</b> → Confirmer l'envoi → run vert.</li>
-      <li>L'email de confirmation du site tombe. Il n'affiche que 8 matchs sur 12 :
-      <b>normal</b>, bug cosmétique connu — l'enregistrement est complet.</li>
+      <li>L'email de confirmation du site tombe. Il peut n'afficher qu'une partie des
+      matchs : <b>normal</b>, bug cosmétique connu — l'enregistrement est complet.</li>
       <li>Tu peux re-cracker et re-soumettre <b>autant que tu veux</b> jusqu'au
       coup d'envoi (compte à rebours en haut).</li>
     </ol>
@@ -326,7 +326,7 @@ const LS = "wcpkl_cfg";
 let cfg = null;
 try { cfg = JSON.parse(localStorage.getItem(LS) || "null"); } catch (e) { cfg = null; }
 
-/* ---------- Calendrier Phase 1 (heure de Paris, juin = UTC+2) ---------- */
+/* ---------- Calendrier (heure de Paris, juin = UTC+2) ---------- */
 const EVENTS = [
   { name: "Deadline Phase 1 — dépôt des 6 journées", t: Date.parse("2026-06-11T12:00:00+02:00"), live: true },
   { name: "Coup d'envoi J2", t: Date.parse("2026-06-15T18:00:00+02:00") },
@@ -334,8 +334,9 @@ const EVENTS = [
   { name: "Coup d'envoi J4", t: Date.parse("2026-06-21T18:00:00+02:00") },
   { name: "Coup d'envoi J5", t: Date.parse("2026-06-24T21:00:00+02:00") },
   { name: "Coup d'envoi J6", t: Date.parse("2026-06-26T21:00:00+02:00") },
+  { name: "Verrou Phase 2 (16es)", t: Date.parse("2026-06-28T21:00:00+02:00"), live: true },
 ];
-const KICKOFFS = { 2: EVENTS[1].t, 3: EVENTS[2].t, 4: EVENTS[3].t, 5: EVENTS[4].t, 6: EVENTS[5].t };
+const KICKOFFS = { 2: EVENTS[1].t, 3: EVENTS[2].t, 4: EVENTS[3].t, 5: EVENTS[4].t, 6: EVENTS[5].t, 7: EVENTS[6].t };
 
 /* ---------- Scoreboard ---------- */
 const $ = (id) => document.getElementById(id);
@@ -343,7 +344,7 @@ function pad(n) { return String(n).padStart(2, "0"); }
 function tickBoard() {
   const now = Date.now();
   const ev = EVENTS.find(e => e.t > now);
-  if (!ev) { $("boardLbl").textContent = "Phase 1"; $("boardEvt").textContent = "Toutes les journées sont lancées"; $("boardClk").textContent = "—"; return; }
+  if (!ev) { $("boardLbl").textContent = "WCPKL"; $("boardEvt").textContent = "Tout est lancé"; $("boardClk").textContent = "—"; return; }
   $("boardLbl").textContent = ev.live ? "Deadline" : "Prochain coup d'envoi";
   $("boardEvt").textContent = ev.name;
   let s = Math.floor((ev.t - now) / 1000);
@@ -357,18 +358,18 @@ setInterval(tickBoard, 1000); tickBoard();
 
 /* ---------- Journée ciblée ---------- */
 let journee = (() => { const now = Date.now();
-  for (const j of [2, 3, 4, 5, 6]) if (KICKOFFS[j] > now) return j;
-  return 6; })();
+  for (const j of [2, 3, 4, 5, 6, 7]) if (KICKOFFS[j] > now) return j;
+  return 7; })();
 function renderJrow() {
   const row = $("jrow"); row.innerHTML = "";
-  for (const j of [2, 3, 4, 5, 6]) {
+  for (const j of [2, 3, 4, 5, 6, 7]) {
     const b = document.createElement("button");
-    b.textContent = "J" + j;
+    b.textContent = (j === 7) ? "P2" : "J" + j;
     if (j === journee) b.classList.add("on");
     b.onclick = () => { journee = j; renderJrow(); };
     row.appendChild(b);
   }
-  const mj = $("mJ"); if (mj) mj.textContent = "J" + journee;
+  const mj = $("mJ"); if (mj) mj.textContent = (journee === 7) ? "P2" : "J" + journee;
 }
 renderJrow();
 
@@ -500,7 +501,7 @@ $("cfgSave").onclick = () => {
   const grid = $("mGrid");
   if (!grid) return;
   let h = "";
-  for (let i = 1; i <= 12; i++) {
+  for (let i = 1; i <= 16; i++) {
     h += '<div class="mrow"><span class="mnum">M' + i + '</span>'
       +  '<input class="msc" id="mh' + i + '" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="Match ' + i + ' domicile">'
       +  '<span class="mdash">\u2013</span>'
@@ -508,7 +509,7 @@ $("cfgSave").onclick = () => {
   }
   grid.innerHTML = h;
   const bt = $("mBt");
-  for (let i = 1; i <= 12; i++) {
+  for (let i = 1; i <= 16; i++) {
     const o = document.createElement("option");
     o.value = String(i); o.textContent = "Match " + i; bt.appendChild(o);
   }
@@ -516,7 +517,7 @@ $("cfgSave").onclick = () => {
 
 function buildManualGrille() {
   const rows = []; let stopped = false;
-  for (let i = 1; i <= 12; i++) {
+  for (let i = 1; i <= 16; i++) {
     const hv = $("mh" + i).value.trim(), av = $("ma" + i).value.trim();
     if (hv === "" && av === "") { stopped = true; continue; }
     if (stopped) return { err: "Trou au Match " + i + " : remplis les matchs dans l'ordre, sans saut." };
@@ -548,7 +549,7 @@ $("mTest").onclick = () => {
   dispatch({ action: "submit-manual", journee: String(journee), grille: g.grille, bt_match: g.bt, kchouch: g.kchouch, dry_run: "true" });
 };
 $("mClear").onclick = () => {
-  for (let i = 1; i <= 12; i++) { $("mh" + i).value = ""; $("ma" + i).value = ""; }
+  for (let i = 1; i <= 16; i++) { $("mh" + i).value = ""; $("ma" + i).value = ""; }
   $("mBt").value = "1"; $("mKch").value = "aucun"; toast("Grille vid\u00e9e");
 };
 
